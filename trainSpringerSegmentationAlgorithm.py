@@ -5,19 +5,21 @@ from labelPCGStates import labelPCGStates
 from trainBandPiMatricesSpringer import trainBandPiMatricesSpringer
 
 
-def trainSpringerSegmentationAlgorith(PCGCellArray, annotationsArray, Fs):
+def trainSpringerSegmentationAlgorithm(PCGCellArray, annotationsArray, Fs):
 
+
+    # PCGCellArray is a list of recordings
     number_of_states = 4
     numPCGs = len(PCGCellArray)
-    state_observation_values = np.zeros(numPCGs, number_of_states)
+    state_observation_values = np.zeros((numPCGs, number_of_states))
 
-    for PCGi in range(PCGCellArray.shape[0]):
+    for PCGi in range(len(PCGCellArray)):
         PCG_audio = PCGCellArray[PCGi]
 
-        S1_locations = annotationsArray[PCGi, 1]
-        S2_locations = annotationsArray[PCGi, 2]
+        S1_locations = annotationsArray[PCGi][ 0]
+        S2_locations = annotationsArray[PCGi][ 1]
 
-        PCG_Features, featuresFs = getSpringerPCGFeatures(PCG_audio, Fs)
+        PCG_Features, featuresFs, psd = getSpringerPCGFeatures(PCG_audio, Fs)
 
         PCG_states = labelPCGStates(PCG_Features[:, 0], S2_locations, S2_locations, featuresFs)
 

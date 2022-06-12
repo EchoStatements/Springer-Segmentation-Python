@@ -59,3 +59,13 @@ class PreprocessingTesting(unittest.TestCase):
 
         self.assertTrue(np.allclose(python_result, np.asarray(matlab_result).reshape(-1)))
 
+    def test_psd(self):
+        from get_PSD_feature_Springer_HMM import get_PSD_feature_Springer_HMM
+
+        python_result = get_PSD_feature_Springer_HMM(self.recording, 1000., 40., 60., use_matlab=True)
+        matlab_result = self.eng.get_PSD_feature_Springer_HMM(self.ml_recording["r"], 1000., 40., 60.)
+
+        print(python_result[:5])
+        print(np.asarray(matlab_result).reshape(-1)[:5])
+
+        self.assertTrue(np.allclose(python_result, np.asarray(matlab_result)))
