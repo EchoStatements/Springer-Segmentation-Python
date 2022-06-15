@@ -22,15 +22,16 @@ def getSpringerPCGFeatures(audio_data, Fs, matlab_psd=False):
     audio_data = schmidt_spike_removal(audio_data, Fs)
 
     homomorphic_envelope = Homomorphic_Envelope_with_Hilbert(audio_data, Fs)
-    downsampled_homomorphic_envelope = resample(homomorphic_envelope, int(Fs / featureFs))
+    downsampled_homomorphic_envelope = resample(homomorphic_envelope, int(np.round(homomorphic_envelope.shape[0] * featureFs /Fs)))
     downsampled_homomorphic_envelope = normalise_signal(downsampled_homomorphic_envelope)
 
     hilbert_envelope = Hilbert_Envelope(audio_data)
-    downsampled_hilbert_envelope = resample(hilbert_envelope, int(Fs / featureFs))
+    downsampled_hilbert_envelope = resample(hilbert_envelope, int(np.round(hilbert_envelope.shape[0] * featureFs /Fs)))
     downsampled_hilbert_envelope = normalise_signal(downsampled_hilbert_envelope)
 
     psd = get_PSD_feature_Springer_HMM(audio_data, Fs, 40, 60, use_matlab=matlab_psd)
-    psd = resample(psd, int(psd.shape[0] / downsampled_homomorphic_envelope.shape[0]))
+    psd = resample(psd, int(downsampled_homomorphic_envelope.shape[0]))
     psd = normalise_signal(psd)
 
-    return downsampled_homomorphic_envelope, downsampled_hilbert_envelope, psd
+    features = np.stack((downsampled_homomorphic_envelope, downsampled_hilbert_envelope, psd), axis=-1)
+    return features, featureFs

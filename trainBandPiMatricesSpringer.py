@@ -11,7 +11,7 @@ def trainBandPiMatricesSpringer(state_observation_values):
 
     for PCGi in range(4):
         for idx in range(4):
-            statei_values[idx] = np.concatenate((statei_values, state_observation_values[PCGi, idx]))
+            statei_values[idx] = np.concatenate((statei_values, state_observation_values[PCGi][idx]))
 
     total_observation_sequence = np.concatenate(statei_values, axis=0)
 
