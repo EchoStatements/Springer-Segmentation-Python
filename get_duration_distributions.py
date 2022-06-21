@@ -16,7 +16,7 @@ def get_duration_distributions(heartrate, systolic_time):
     std_diastole = 0.07 * mean_diastole + (6. / 1000.) * springer_options.audio_segmentation_Fs
 
 
-    d_distributions = np.zeros(4, 2)
+    d_distributions = np.zeros((4, 2))
 
     d_distributions[0, 0] = mean_S1
     d_distributions[0, 1] = std_S1 ** 2

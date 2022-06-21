@@ -3,6 +3,27 @@ import unittest
 import matlab.engine
 import numpy as np
 
+from get_duration_distributions import get_duration_distributions
+
+
+class DurationDistributionTest(unittest.TestCase):
+
+    def setUp(self):
+        self.eng = matlab.engine.start_matlab()
+
+        self.eng.addpath("../Springer-Segmentation-Code/")
+        self.HEART_RATE = 69.7674
+        self.SYSTOLIC_TIME = 0.342
+
+    def test_duration_distribution_code(self):
+        d_distributions, max_S1, min_S1,\
+        max_S2, min_S2, max_systole, min_systole,\
+        max_diastole, min_diastole = get_duration_distributions(self.HEART_RATE, self.SYSTOLIC_TIME)
+
+        ml_d_distributions, ml_max_S1, ml_min_S1, \
+        ml_max_S2, ml_min_S2, ml_max_systole, ml_min_systole, \
+        ml_max_diastole, ml_min_diastole = self.eng.get_duration_distributions(self.HEART_RATE, self.SYSTOLIC_TIME)
+
 
 class PreprocessingTesting(unittest.TestCase):
 

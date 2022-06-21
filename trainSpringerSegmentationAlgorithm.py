@@ -12,7 +12,7 @@ def trainSpringerSegmentationAlgorithm(PCGCellArray, annotationsArray, Fs):
     number_of_states = 4
     numPCGs = len(PCGCellArray)
     # state_observation_values = np.zeros((numPCGs, number_of_states))
-    state_observation_values =  numPCGs * [number_of_states * [None]]
+    state_observation_values =  numPCGs * [number_of_states * [np.zeros((0, 3))]]
 
     for PCGi in range(len(PCGCellArray)):
         PCG_audio = PCGCellArray[PCGi]
@@ -22,11 +22,11 @@ def trainSpringerSegmentationAlgorithm(PCGCellArray, annotationsArray, Fs):
 
         PCG_Features, featuresFs = getSpringerPCGFeatures(PCG_audio, Fs)
 
-        PCG_states = labelPCGStates(PCG_Features[:, 0], S2_locations, S2_locations, featuresFs)
+        PCG_states = labelPCGStates(PCG_Features[:, 0], S1_locations, S2_locations, featuresFs)
 
-    for state_i in range(number_of_states):
-        # I don't think this is how conditional indexing works in numpy?
-        state_observation_values[PCGi][state_i] = PCG_Features[PCG_states == state_i, :]
+        for state_i in range(number_of_states):
+            # I don't think this is how conditional indexing works in numpy?
+            state_observation_values[PCGi][state_i] = PCG_Features[PCG_states == state_i + 1, :]
 
     logistic_regression_B_matrix, pi_vector, total_obs_distribution = trainBandPiMatricesSpringer(state_observation_values)
 
