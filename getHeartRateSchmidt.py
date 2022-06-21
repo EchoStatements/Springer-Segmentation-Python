@@ -25,7 +25,7 @@ def getHeartRateSchmidt(audio_data, Fs):
     signal_autocorrelation = c[homomorphic_envelope.shape[0]:]
     min_idx = 0.5 * Fs
     max_idx = 2 * Fs
-    index = np.argmax(signal_autocorrelation[min_idx: max_idx])
+    index = np.argmax(signal_autocorrelation[int(min_idx): int(max_idx)])
     true_idx = index + min_idx - 1
 
     heartRate = 60. / (true_idx / Fs)
@@ -34,7 +34,7 @@ def getHeartRateSchmidt(audio_data, Fs):
     min_sys_duration = np.round(0.2 * Fs)
 
     # This is definitely wrong
-    pos = np.argmax(signal_autocorrelation[min_sys_duration: max_sys_duration])
+    pos = np.argmax(signal_autocorrelation[int(min_sys_duration): int(max_sys_duration)])
     systolicTimeInterval = (min_sys_duration + pos) / Fs
 
     return heartRate, systolicTimeInterval

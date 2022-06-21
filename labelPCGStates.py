@@ -11,15 +11,15 @@ def labelPCGStates(envelope, s1_positions, s2_positions, samplingFrequency):
     std_S2 = 0.022 * samplingFrequency
 
     for i in range(s1_positions.shape[0]):
-        upper_bound = int(np.round(min(np.asarray(states.shape[0] - 1), s1_positions[i] + mean_S1)))
+        upper_bound = int(np.round(min(np.asarray(states.shape[0] - 1), s1_positions[i] + mean_S1 - 1)))
 
         # MIGHT BE AN OFF BY ONE ERROR HERE
         states[max(0, s1_positions[i]-1):min(upper_bound, states.shape[0] - 1) ] = 1
 
     for i in range(s2_positions.shape[0]):
-        lower_bound = int(max(s2_positions[i] - np.floor((mean_S2 + std_S2)), 0))
-        upper_bound = int(min(states.shape[0], np.ceil(s2_positions[i] + np.floor(mean_S2) + std_S2)))
-        search_window = envelope[lower_bound-1:upper_bound] * (states[lower_bound-1:upper_bound] != 1)
+        lower_bound = int(max(s2_positions[i] - np.floor((mean_S2 + std_S2))-1, 0))
+        upper_bound = int(min(states.shape[0] - 1, np.ceil(s2_positions[i] + np.floor(mean_S2) + std_S2)-1))
+        search_window = envelope[lower_bound-1:upper_bound-1] * (states[lower_bound-1:upper_bound-1] != 1)
 
         s2_index = np.argmax(search_window)
 
@@ -37,7 +37,7 @@ def labelPCGStates(envelope, s1_positions, s2_positions, samplingFrequency):
             else:
                 end_pos = np.argmin(diffs) - 1
             # there was a 0 * std in the line below that I've removed
-            states[int(np.ceil(s2_index + (mean_S2))):end_pos]
+            states[int(np.ceil(s2_index + (mean_S2))):end_pos] = 4
 
     first_location_of_definite_state = np.argmax(states != 0)
 

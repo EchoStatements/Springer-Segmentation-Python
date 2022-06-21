@@ -14,12 +14,12 @@ train_recordings = [example_audio_data[:, idx][0].reshape(-1) for idx in range(5
 # train_annotations = example_data.example_annotation[:5, :]
 train_annotations = [ [example_annotations[idx, 0], example_annotations[idx, 1]] for idx in range(5) ]
 
-test_recordings = example_audio_data[:, 5][0].reshape(-1)
+test_recordings = [example_audio_data[:, 5][0].reshape(-1)]
 test_recordings_list = [example_audio_data[: -1]]
 
-B_matrix, pi_vector, total_obs_distribution = trainSpringerSegmentationAlgorithm(train_recordings, train_annotations, springer_options.audio_Fs)
+B_matrix, pi_vector, total_obs_distribution, models = trainSpringerSegmentationAlgorithm(train_recordings, train_annotations, springer_options.audio_Fs)
 
 numPCGs = len(test_recordings)
 
 for PCGi in range(numPCGs):
-    assigned_states = runSpringerSegmentationAlgorithm(test_recordings[PCGi], springer_options.audio_Fs, B_matrix, pi_vector, total_obs_distribution)
+    assigned_states = runSpringerSegmentationAlgorithm(test_recordings[PCGi], springer_options.audio_Fs, B_matrix, pi_vector, total_obs_distribution, models)
