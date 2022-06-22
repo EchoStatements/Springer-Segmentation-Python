@@ -4,7 +4,7 @@ import matlab.engine
 import numpy as np
 
 from get_duration_distributions import get_duration_distributions
-
+from getHeartRateSchmidt import getHeartRateSchmidt
 
 class DurationDistributionTest(unittest.TestCase):
 
@@ -36,6 +36,26 @@ class DurationDistributionTest(unittest.TestCase):
 
         self.assertTrue(np.allclose(d_distributions, ml_d_distributions))
 
+class getHeartRateSchmidtTest(unittest.TestCase):
+
+    def setUp(self):
+        self.eng = matlab.engine.start_matlab()
+
+        self.eng.addpath("../Springer-Segmentation-Code/")
+        self.ml_recording = self.eng.load("recording1.mat")
+        self.recording = np.asarray(self.ml_recording["r"]).reshape(-1)
+        self.Fs = 1000.
+
+    def test_getHeartRateSchmidt(self):
+        heartRate, systolicTimeInterval = getHeartRateSchmidt(self.recording, self.Fs)
+        ml_heartRate, ml_systolicTimeInterval = self.eng.getHeartRateSchmidt(self.ml_recording["r"], self.Fs, 0, nargout=2)
+        
+        print("python hr: " + str(heartRate) + ", matlab hr: " + str(ml_heartRate))
+        print("python sysTimeInt: " + str(systolicTimeInterval) + ", matlab sysTimeInt: " + str(ml_systolicTimeInterval))
+
+        self.assertTrue(np.allclose(heartRate, np.asarray(ml_heartRate).reshape(-1)))
+        self.assertTrue(np.allclose(systolicTimeInterval, np.asarray(ml_systolicTimeInterval).reshape(-1)))
+        
 class PreprocessingTesting(unittest.TestCase):
 
     def setUp(self):
