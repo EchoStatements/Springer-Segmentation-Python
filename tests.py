@@ -15,15 +15,17 @@ class ExpandQTTest(unittest.TestCase):
 
         self.ml_qt = self.eng.load("qt.mat")["original_qt"]
         self.qt = np.asarray(self.ml_qt)
-        self.NEW_FS = 1000
-        self.NEW_LENGTH = 35000
-        self.OLD_FS = 50
+        self.NEW_FS = 1000.
+        self.NEW_LENGTH = 35000.
+        self.OLD_FS = 50.
 
     def test_expand_qt(self):
 
-        python_result = expand_qt(self.qt, self.OLD_FS, self.NEW_FS, self.NEW_LENGTH)
+        python_result = expand_qt(self.qt, int(self.OLD_FS), int(self.NEW_FS), int(self.NEW_LENGTH))
         ml_result = self.eng.expand_qt(self.ml_qt, self.OLD_FS, self.NEW_FS, self.NEW_LENGTH)
         ml_result = np.asarray(ml_result)
+
+        print(np.mean(ml_result == python_result))
 
         self.assertTrue(np.allclose(python_result, ml_result))
 
