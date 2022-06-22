@@ -15,8 +15,8 @@ def expand_qt(original_qt, old_fs, new_fs, new_length):
 
         value_at_midpoint = original_qt[mid_point]
 
-        expanded_start_index = int(np.round(start_index / old_fs * new_fs))
-        expanded_end_index = int(np.round(start_index) / old_fs * new_fs) - 1
+        expanded_start_index = int(np.round((start_index) / old_fs * new_fs))
+        expanded_end_index = int(np.round((end_index+1) / old_fs * new_fs))
 
         if expanded_end_index > new_length:
             expanded_end_index = new_length
@@ -24,4 +24,5 @@ def expand_qt(original_qt, old_fs, new_fs, new_length):
         expanded_qt[expanded_start_index:expanded_end_index] = value_at_midpoint
         start_index = end_index
 
+    expanded_qt.reshape(-1, 1)
     return expanded_qt
