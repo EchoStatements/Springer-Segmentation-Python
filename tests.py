@@ -21,9 +21,20 @@ class DurationDistributionTest(unittest.TestCase):
         max_diastole, min_diastole = get_duration_distributions(self.HEART_RATE, self.SYSTOLIC_TIME)
 
         ml_d_distributions, ml_max_S1, ml_min_S1, \
-        ml_max_S2, ml_min_S2, ml_max_systole, ml_min_systole, \
-        ml_max_diastole, ml_min_diastole = self.eng.get_duration_distributions(self.HEART_RATE, self.SYSTOLIC_TIME)
+        ml_max_S2, ml_min_S2, \
+        ml_max_systole, ml_min_systole, \
+        ml_max_diastole, ml_min_diastole = self.eng.get_duration_distributions_wrapper(self.HEART_RATE, self.SYSTOLIC_TIME, nargout=9)
+        
+        self.assertTrue(np.allclose(max_S1, np.asarray(ml_max_S1).reshape(-1)))
+        self.assertTrue(np.allclose(min_S1, np.asarray(ml_min_S1).reshape(-1)))
+        self.assertTrue(np.allclose(max_S2, np.asarray(ml_max_S2).reshape(-1)))
+        self.assertTrue(np.allclose(min_S2, np.asarray(ml_min_S2).reshape(-1)))
+        self.assertTrue(np.allclose(max_systole, np.asarray(ml_max_systole).reshape(-1)))
+        self.assertTrue(np.allclose(min_systole, np.asarray(ml_min_systole).reshape(-1)))
+        self.assertTrue(np.allclose(max_diastole, np.asarray(ml_max_diastole).reshape(-1)))
+        self.assertTrue(np.allclose(min_diastole, np.asarray(ml_min_diastole).reshape(-1)))
 
+        self.assertTrue(np.allclose(d_distributions, ml_d_distributions))
 
 class PreprocessingTesting(unittest.TestCase):
 
