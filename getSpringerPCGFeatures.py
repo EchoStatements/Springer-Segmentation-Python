@@ -8,6 +8,7 @@ from get_PSD_feature_Springer_HMM import get_PSD_feature_Springer_HMM
 from normalise_signal import normalise_signal
 from schmidt_spike_removal import schmidt_spike_removal
 from Homomorphic_Envelope_with_Hilbert import Homomorphic_Envelope_with_Hilbert
+from getDWT import getDWT
 
 from scipy.signal import resample
 
@@ -32,6 +33,19 @@ def getSpringerPCGFeatures(audio_data, Fs, matlab_psd=False):
     psd = get_PSD_feature_Springer_HMM(audio_data, Fs, 40, 60, use_matlab=matlab_psd)
     psd = resample(psd, int(downsampled_homomorphic_envelope.shape[0]))
     psd = normalise_signal(psd)
+    
+    #wavelet features
+    wavelet_level = 3
+    wavelet_name = "rbio3.9"
+    
+    #audio needs to be longer than 1 second for getDWT to work
+    cD, cA = getDWT(audio_data, wavelet_level, wavelet_name)
+    
+    #wavelet_feature = ...
+    #wavelet_feature = ...
+    downsampled_wavelet = []
+    #downsampled_wavelet = ...
+    #downsampled_wavelet = ...
 
-    features = np.stack((downsampled_homomorphic_envelope, downsampled_hilbert_envelope, psd), axis=-1)
+    features = np.stack((downsampled_homomorphic_envelope, downsampled_hilbert_envelope, psd, downsampled_wavelet), axis=-1)
     return features, featureFs
