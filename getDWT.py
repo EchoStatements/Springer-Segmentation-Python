@@ -67,8 +67,6 @@ def appcoef(coeffs, wavelet, level, **kwargs):
     # this function also calculates the IDWT (kinda confusing API)
     approx = pywt.waverec(coeffs[:-level], wavelet, **kwargs)
     # not sure why PyWavelets sometimes gives duplicate final rows/columns
-    print(approx[-1])
-    print(approx[-2])
     if np.abs(approx[-1] - approx[-2])<0.00001:
         approx = approx[:-1]
     return approx
