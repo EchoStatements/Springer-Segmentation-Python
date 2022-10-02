@@ -2,8 +2,34 @@
 import numpy as np
 
 def schmidt_spike_removal(original_signal, fs):
+    """
+    
+    % The spike removal process works as follows:
+    % (1) The recording is divided into 500 ms windows.
+    % (2) The maximum absolute amplitude (MAA) in each window is found.
+    % (3) If at least one MAA exceeds three times the median value of the MAA's,
+    % the following steps were carried out. If not continue to point 4.
+    % (a) The window with the highest MAA was chosen.
+    % (b) In the chosen window, the location of the MAA point was identified as the top of the noise spike.
+    % (c) The beginning of the noise spike was defined as the last zero-crossing point before theMAA point.
+    % (d) The end of the spike was defined as the first zero-crossing point after the maximum point.
+    % (e) The defined noise spike was replaced by zeroes.
+    % (f) Resume at step 2.
+    % (4) Procedure completed.
+    %
+    
+    Parameters
+    ----------
+    original_signal : nd_array of shape (recording_length,)
+    fs : float
+        Sampling Frequency
 
-    windowsize = np.round(fs/2).astype(int)
+    Returns
+    -------
+
+    """
+
+    windowsize = np.round(fs / 2).astype(int)
     trailingsamples = (original_signal.shape[0] % windowsize).astype(int)
     if trailingsamples == 0:
         sample_frames = np.reshape(original_signal, (windowsize, -1))

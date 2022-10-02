@@ -1,8 +1,9 @@
 import matlab.engine
 import numpy as np
 import scipy.signal as signal
-
 import scipy
+
+import springer_segmentation.extract_features
 
 print(scipy.__version__)
 
@@ -38,7 +39,7 @@ def get_PSD_feature_Springer_HMM(data, sampling_frequency, frequency_limit_low, 
     return psd
 
 
-matlab_result = eng.get_PSD_feature_Springer_HMM(ml_recording["r"], 1000., 50., 60.)
+matlab_result = springer_segmentation.extract_features.get_power_spectral_density(ml_recording["r"], 1000., 50., 60.)
 python_result = get_PSD_feature_Springer_HMM(recording, 1000, 50, 60)
 
 ml_result = np.asarray(matlab_result).reshape(-1)
