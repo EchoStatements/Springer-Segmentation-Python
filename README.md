@@ -26,3 +26,7 @@ annotation, heart_rate = run_hmm_segmentation(wavs[0],
                                       max_heart_rate= 200,
                                       return_heart_rate=True)
 ```
+
+If using this code, please cite:
+
+Summerton, S., Wood, D., Murphy, D., Redfern, O., Benatan, M., Kaisti, M., & Wong, D. C. (2022). Two-stage Classification for Detecting Murmurs from Phonocardiograms Using Deep and Expert Features. In 2022 Computing in Cardiology (CinC), volume 49. IEEE, 2023; 1–4.
