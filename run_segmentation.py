@@ -1,24 +1,21 @@
-"""
-D. Springer, Logistic Regression-HSMM-based Heart Sound Segmentation
-https://physionet.org/content/hss/1.0/
-"""
-
 from upsample_states import upsample_states
 from heart_rate import get_heart_rate
 from extract_features import getSpringerPCGFeatures
 from viterbi import viterbi_decode_recording
 import numpy as np
 
+
 def run_hmm_segmentation(audio_data,
                          models,
                          pi_vector,
                          total_observation_distribution,
-                         Fs = 4000,
+                         Fs=4000,
                          min_heart_rate=60,
                          max_heart_rate=200,
                          use_wavelet=True,
                          use_psd=True,
-                         try_multiple_heart_rates=False,
+                         heart_rate_function=None,
+                         try_multiple_heart_rates=True,
                          return_heart_rate=False):
     """
     Give segmentation of recording `audio_data` based on the Hidden Markov Model (HMM) defined by
@@ -44,16 +41,25 @@ def run_hmm_segmentation(audio_data,
 
     PCG_features, featuresFs = getSpringerPCGFeatures(audio_data, Fs, use_psd=use_psd, use_wavelet=use_wavelet)
 
-    heart_rates, systolic_time_intervals = get_heart_rate(audio_data,
-                                                     Fs,
-                                                     min_heart_rate=min_heart_rate,
-                                                     max_heart_rate=max_heart_rate,
-                                                     multiple_rates=try_multiple_heart_rates)
+    if heart_rate_function is None:
+        heart_rates, systolic_time_intervals = get_heart_rate(audio_data,
+                                                              Fs,
+                                                              min_heart_rate=min_heart_rate,
+                                                              max_heart_rate=max_heart_rate,
+                                                              multiple_rates=try_multiple_heart_rates)
 
     best_delta = -np.inf
+
+    # Allow users to just return scalar values
+    if isinstance(heart_rates, float):
+        heart_rates = [heart_rates]
+    if isinstance(systolic_time_intervals, float):
+        systolic_time_intervals = [systolic_time_intervals]
+
     for heart_rate, systolic_time_interval in zip(heart_rates, systolic_time_intervals):
-        delta, _, qt = viterbi_decode_recording(PCG_features, pi_vector, models, total_observation_distribution, heart_rate,
-                                            systolic_time_interval, featuresFs)
+        delta, _, qt = viterbi_decode_recording(PCG_features, pi_vector, models, total_observation_distribution,
+                                                heart_rate,
+                                                systolic_time_interval, featuresFs)
 
         if delta.sum() > best_delta:
             best_delta = delta.sum()
@@ -61,7 +67,6 @@ def run_hmm_segmentation(audio_data,
             best_qt = qt
 
     assigned_states = upsample_states(best_qt, featuresFs, Fs, audio_data.shape[0])
-
 
     # print(f"heart rate: {best_heart_rate}")
     if return_heart_rate:

@@ -28,6 +28,10 @@ annotation, heart_rate = run_hmm_segmentation(wavs[0],
                                       return_heart_rate=True)
 ```
 
-If using this code, please cite:
+This code was developed for and used in the following paper, which should be cited if you use the code in your own work.
 
 Summerton, S., Wood, D., Murphy, D., Redfern, O., Benatan, M., Kaisti, M., & Wong, D. C. (2022). Two-stage Classification for Detecting Murmurs from Phonocardiograms Using Deep and Expert Features. In 2022 Computing in Cardiology (CinC), volume 49. IEEE, 2023; 1–4.
+
+Additionally, you should cite the original paper upon which our code is based. 
+
+D. Springer et al., "Logistic Regression-HSMM-based Heart Sound Segmentation," IEEE Trans. Biomed. Eng., In Press, 2015.

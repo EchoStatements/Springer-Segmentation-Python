@@ -29,12 +29,12 @@ def schmidt_spike_removal(original_signal, fs):
 
     """
 
-    windowsize = np.round(fs / 2).astype(int)
-    trailingsamples = (original_signal.shape[0] % windowsize).astype(int)
-    if trailingsamples == 0:
-        sample_frames = np.reshape(original_signal, (windowsize, -1))
+    window_size = np.round(fs / 2).astype(int)
+    trailing_samples = (original_signal.shape[0] % window_size).astype(int)
+    if trailing_samples == 0:
+        sample_frames = np.reshape(original_signal, (window_size, -1))
     else:
-        sample_frames = np.reshape(original_signal[:-trailingsamples], (windowsize, -1))
+        sample_frames = np.reshape(original_signal[:-trailing_samples], (window_size, -1))
 
     MAAs = np.max(np.abs(sample_frames))
 

@@ -29,13 +29,12 @@ def train_hmm_segmentation(recordings, annotations, recording_freq=4000, feature
     # recordings is a list of recording
     number_of_states = 4
     numPCGs = len(recordings)
-    # state_observation_values = np.zeros((numPCGs, number_of_states))
     state_observation_values = []
 
     for rec_idx in trange(len(recordings)):
         full_recording = recordings[rec_idx]
 
-        if annotations[rec_idx].shape[0] == 3 and annotations[rec_idx].shape[1] != 3: # hacky workaround to hackier data handling
+        if annotations[rec_idx].shape[0] == 3 and annotations[rec_idx].shape[1] != 3:
             annotation = annotations[rec_idx].T
         else:
             annotation = annotations[rec_idx]
@@ -114,6 +113,11 @@ def create_segmentation_array(recording,
                               recording_frequency,
                               feature_frequency=50):
     """
+    Creates two lists: the first is a list of clips from the recording that we can construct segmentations for from
+    the data in the csv file; the second is the segmentations themselves. The two lists will be the same length, and
+    the i-th entries in both lists will be ndarrays of the same shape, with the entry in the second list being the
+    segmentation of the corresponding clip in the first list.
+
 
     Parameters
     ----------
@@ -127,6 +131,9 @@ def create_segmentation_array(recording,
 
     Returns
     -------
+
+    clipped_recordings : list of ndarrays
+    segmentations : list of ndarrays
 
     """
 
@@ -238,20 +245,28 @@ def _fit_model(state_observation_values):
 
 def main():
     import matplotlib.pyplot as plt
-    recordings, segmentations, names = get_wavs_and_tsvs(return_names=True)
+
+    # load data from tiny_test directory
+    recordings, segmentations, names = get_wavs_and_tsvs(input_folder="tiny_test", return_names=True)
+
+
+    # train segmentation
+    models, pi_vector, total_obs_distribution= train_hmm_segmentation(recordings[:10], segmentations[:10])
+
+    idx = 0
     ground_truth_segmentations = []
     clipped_recordings = []
 
-
-    models, pi_vector, total_obs_distribution= train_hmm_segmentation(recordings[:10], segmentations[:10])
-    idx = 0
+    # collect ground truth segmentations for plotting
     for rec, seg in zip(recordings[:100], segmentations[:100]):
         clipped_recording, ground_truth = create_segmentation_array(rec,
-                                                     seg,
-                                                     recording_frequency=4000,
-                                                     feature_frequency=4000)
+                                                                    seg,
+                                                                    recording_frequency=4000,
+                                                                    feature_frequency=4000)
         ground_truth_segmentations.append(ground_truth[0])
         clipped_recordings.append(clipped_recording[0])
+
+    # collect model-generated segmentations for plotting
     for rec, seg, name in tzip(clipped_recordings[:20], ground_truth_segmentations, names):
         annotation, hr = run_hmm_segmentation(rec,
                                               models,
@@ -260,7 +275,7 @@ def main():
                                               use_psd=True,
                                               return_heart_rate=True)
         if True:
-            plt.title(f"{name} {hr}")
+            plt.title(f"{name}")
             # plt.plot(np.array(np.arange(annotation.shape[0])/4000),  2 +  2 * clipped_recordings[idx]/clipped_recordings[idx].max(), label="recording", lw=0.2)
             plt.plot(np.array(np.arange(annotation.shape[0])/4000), seg, label="ground truth")
             plt.plot(np.array(np.arange(annotation.shape[0])/4000), annotation, label="model")
