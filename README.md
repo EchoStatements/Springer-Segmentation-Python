@@ -4,7 +4,8 @@ Python implementation of https://github.com/davidspringer/Springer-Segmentation-
 
 ## Minimal Example
 
-I haven't actually run this... so yeah, beware. If it's wrong, the `main()` of `train_segmentation.py` definitely works but is a bit convoluted
+The following is an example of how to run the code. The example takes on a collection of recordings (`.wav` files) and their corresponding
+segmentations (`.tsv` files), and trains the HMM on that data, then runs inference on the first `.wav` in the list.  
 
 ```python
 from springer_segmentation.utils import get_wavs_and_tsvs
