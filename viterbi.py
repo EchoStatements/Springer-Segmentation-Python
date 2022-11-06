@@ -4,7 +4,6 @@ from duration_distributions import get_duration_distributions
 
 
 def viterbi_decode_recording(observation_sequence,
-                             pi_vector,
                              models,
                              total_obs_distribution,
                              heart_rate,
@@ -15,7 +14,6 @@ def viterbi_decode_recording(observation_sequence,
    Parameters
    ----------
    observation_sequence
-   pi_vector
    total_obs_distribution
    heart_rate
    systolic_time
@@ -26,6 +24,7 @@ def viterbi_decode_recording(observation_sequence,
    -------
 
    """
+    pi_vector = np.array([0.25, 0.25, 0.25, 0.25])
     seq_len = observation_sequence.shape[0]
     num_states = 4
     max_duration_D = int(np.round((60. / heart_rate) * recording_frequency))

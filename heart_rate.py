@@ -54,7 +54,7 @@ def get_heart_rate(audio_data,
 
         systolic_time_intervals = []
         for max_sd in max_sys_durations:
-            pos = np.argmax(signal_autocorrelation[int(min_sys_duration): int(max_sd)])
+            pos = np.argmax(audio_data[int(min_sys_duration): int(max_sd)])
             systolic_time_intervals.append( (min_sys_duration + pos) / Fs)
 
     if not multiple_rates or len(heart_rates) == 0:
@@ -64,11 +64,9 @@ def get_heart_rate(audio_data,
         heart_rate = 60. / (true_idx / Fs)
 
         max_sys_duration = np.round(((60. / heart_rate) * Fs) / 2)
-        pos = np.argmax(signal_autocorrelation[int(min_sys_duration): int(max_sys_duration)])
+        pos = np.argmax(audio_data[int(min_sys_duration): int(max_sys_duration)])
         systolic_time_interval = (min_sys_duration + pos) / Fs
         systolic_time_intervals = [systolic_time_interval]
         heart_rates = [heart_rate]
 
-
     return heart_rates, systolic_time_intervals
-

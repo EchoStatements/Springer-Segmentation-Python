@@ -7,7 +7,6 @@ import numpy as np
 
 def run_hmm_segmentation(audio_data,
                          models,
-                         pi_vector,
                          total_observation_distribution,
                          Fs=4000,
                          min_heart_rate=60,
@@ -19,14 +18,12 @@ def run_hmm_segmentation(audio_data,
                          return_heart_rate=False):
     """
     Give segmentation of recording `audio_data` based on the Hidden Markov Model (HMM) defined by
-    the parameters `models`, `pi_vector` and `total_observation_distribution`.
+    the parameters `models` and `total_observation_distribution`.
 
     Parameters
     ----------
     audio_data: ndarray of shape (recording_length,)
     Fs: float giving the sampling frequency
-    pi_vector: ndarray of shape (num_states,)
-        The array of initial state probabilities
     total_observation_distribution: list of ndarrays
         TODO
     models
@@ -57,7 +54,7 @@ def run_hmm_segmentation(audio_data,
         systolic_time_intervals = [systolic_time_intervals]
 
     for heart_rate, systolic_time_interval in zip(heart_rates, systolic_time_intervals):
-        delta, _, qt = viterbi_decode_recording(PCG_features, pi_vector, models, total_observation_distribution,
+        delta, _, qt = viterbi_decode_recording(PCG_features, models, total_observation_distribution,
                                                 heart_rate,
                                                 systolic_time_interval, featuresFs)
 

@@ -28,7 +28,6 @@ def train_hmm_segmentation(recordings, annotations, recording_freq=4000, feature
 
     # recordings is a list of recording
     number_of_states = 4
-    numPCGs = len(recordings)
     state_observation_values = []
 
     for rec_idx in trange(len(recordings)):
@@ -62,9 +61,9 @@ def train_hmm_segmentation(recordings, annotations, recording_freq=4000, feature
                 these_state_observations.append(PCG_Features[segmentation == state_i, :])
             state_observation_values.append(these_state_observations)
 
-    models, pi_vector, total_obs_distribution = _fit_model(state_observation_values)
+    models, total_obs_distribution = _fit_model(state_observation_values)
 
-    return models, pi_vector, total_obs_distribution
+    return models, total_obs_distribution
 
 
 def get_recordings_and_segmentations():
@@ -185,7 +184,6 @@ def create_segmentation_array(recording,
 def _fit_model(state_observation_values):
 
     number_of_states = 4
-    pi_vector = 0.25 * np.ones(4)
     num_features = state_observation_values[0][0].shape[1]
 
     models = []
@@ -241,7 +239,7 @@ def _fit_model(state_observation_values):
 
     # Might want to make B_matrix and actual ndarray rather than list of ndarrays
     # But for now, we also return the model, since it will be more useful than the matrix
-    return models, pi_vector, total_obs_distribution
+    return models, total_obs_distribution
 
 def main():
     import matplotlib.pyplot as plt
@@ -251,7 +249,7 @@ def main():
 
 
     # train segmentation
-    models, pi_vector, total_obs_distribution= train_hmm_segmentation(recordings[:10], segmentations[:10])
+    models, total_obs_distribution= train_hmm_segmentation(recordings[:10], segmentations[:10])
 
     idx = 0
     ground_truth_segmentations = []
@@ -270,7 +268,6 @@ def main():
     for rec, seg, name in tzip(clipped_recordings[:20], ground_truth_segmentations, names):
         annotation, hr = run_hmm_segmentation(rec,
                                               models,
-                                              pi_vector,
                                               total_obs_distribution,
                                               use_psd=True,
                                               return_heart_rate=True)

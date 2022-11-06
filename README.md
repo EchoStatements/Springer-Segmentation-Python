@@ -16,12 +16,11 @@ from springer_segmentation.run_segmentation import run_hmm_segmentation
 wavs, tsvs = get_wavs_and_tsvs("tiny_test")
 
 # train the model
-models, pi_vector, total_obs_distribution = train_hmm_segmentation(wavs, tsvs)
+models, total_obs_distribution = train_hmm_segmentation(wavs, tsvs)
 
 # get segmentations out of the model for the first wav file in our list
 annotation, heart_rate = run_hmm_segmentation(wavs[0],
                                       models,
-                                      pi_vector,
                                       total_obs_distribution,
                                       min_heart_rate=60,
                                       max_heart_rate= 200,
