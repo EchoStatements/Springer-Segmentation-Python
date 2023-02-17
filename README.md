@@ -2,30 +2,10 @@
 
 Python implementation of https://github.com/davidspringer/Springer-Segmentation-Code 
 
-## Minimal Example
+## Using This Code
 
-The following is an example of how to run the code. The example takes on a collection of recordings (`.wav` files) and their corresponding
-segmentations (`.tsv` files), and trains the HMM on that data, then runs inference on the first `.wav` in the list.  
+An example of how to use this code can be found in `full_training_script.py`. The script takes two arguments, the directory for the training data and the directory for the test data. The data in both directories is expected to be `.wav` files and corresponding `.tsv` files in the format specified in the [2022 Physionet Challenge](https://moody-challenge.physionet.org/2022/#Oliveira2022)
 
-```python
-from springer_segmentation.utils import get_wavs_and_tsvs
-from springer_segmentation.train_segmentation import train_hmm_segmentation
-from springer_segmentation.run_segmentation import run_hmm_segmentation
-
-# get list of recordings and corresponding segmentations (in the format given in the tsv)
-wavs, tsvs = get_wavs_and_tsvs("tiny_test")
-
-# train the model
-models, total_obs_distribution = train_hmm_segmentation(wavs, tsvs)
-
-# get segmentations out of the model for the first wav file in our list
-annotation, heart_rate = run_hmm_segmentation(wavs[0],
-                                      models,
-                                      total_obs_distribution,
-                                      min_heart_rate=60,
-                                      max_heart_rate= 200,
-                                      return_heart_rate=True)
-```
 
 This code was developed for and used in the following paper, which should be cited if you use the code in your own work.
 

@@ -3,12 +3,12 @@ from scipy.stats import multivariate_normal
 from duration_distributions import get_duration_distributions
 
 
-def viterbi_decode_recording(observation_sequence,
-                             models,
-                             total_obs_distribution,
-                             heart_rate,
-                             systolic_time,
-                             recording_frequency):
+def viterbi_segment(observation_sequence,
+                    models,
+                    total_obs_distribution,
+                    heart_rate,
+                    systolic_time,
+                    recording_frequency):
     """
 
    Parameters
@@ -56,12 +56,11 @@ def viterbi_decode_recording(observation_sequence,
     max_S2, min_S2, max_systole, min_systole, \
     max_diastole, min_diastole = get_duration_distributions(heart_rate, systolic_time)
 
-    # line 170 in the matlab code suggests we might get some index errors in the code below, since matlab autoextends vectors
     duration_probs = np.zeros((num_states, 3 * recording_frequency))
     duration_sum = np.zeros(num_states)
 
     for state_j in [1, 2, 3, 4]:
-        for duration in range(1, max_duration_D):
+        for duration in range(1, max_duration_D + 1):
             if state_j == 1:
                 duration_probs[state_j - 1, duration] = multivariate_normal.pdf(duration,
                                                                                 mean=d_distributions[state_j - 1, 0],
@@ -69,18 +68,19 @@ def viterbi_decode_recording(observation_sequence,
                 if duration < min_S1 or duration > max_S1:
                     duration_probs[state_j - 1, duration] = 0  # np.finfo(float).tiny
 
-            elif state_j == 3:
-                duration_probs[state_j - 1, duration] = multivariate_normal.pdf(duration,
-                                                                                mean=d_distributions[state_j - 1, 0],
-                                                                                cov=d_distributions[state_j - 1, 1])
-                if duration < min_S2 or duration > max_S2:
-                    duration_probs[state_j - 1, duration] = 0  # np.finfo(float).tiny
 
             elif state_j == 2:
                 duration_probs[state_j - 1, duration] = multivariate_normal.pdf(duration,
                                                                                 mean=d_distributions[state_j - 1, 0],
                                                                                 cov=d_distributions[state_j - 1, 1])
                 if duration < min_systole or duration > max_systole:
+                    duration_probs[state_j - 1, duration] = 0  # np.finfo(float).tiny
+
+            elif state_j == 3:
+                duration_probs[state_j - 1, duration] = multivariate_normal.pdf(duration,
+                                                                                mean=d_distributions[state_j - 1, 0],
+                                                                                cov=d_distributions[state_j - 1, 1])
+                if duration < min_S2 or duration > max_S2:
                     duration_probs[state_j - 1, duration] = 0  # np.finfo(float).tiny
 
             elif state_j == 4:
@@ -92,6 +92,14 @@ def viterbi_decode_recording(observation_sequence,
 
         duration_sum[state_j - 1] = np.sum(duration_probs[state_j - 1, :])
 
+    """
+    import matplotlib.pyplot as plt
+    plt.plot(duration_probs[0, :])
+    plt.plot(duration_probs[1, :])
+    plt.plot(duration_probs[2, :])
+    plt.plot(duration_probs[3, :])
+    plt.show()
+    """
     assigned_states = np.zeros(delta.shape[0])
     delta[0, :] = np.log(pi_vector) + np.log(observation_probs[0, :])
     psi[0, :] = -1
@@ -187,6 +195,6 @@ def viterbi_decode_recording(observation_sequence,
         if count > 1000:
             break
 
-    assigned_states = assigned_states[:seq_len + 1]
+    assigned_states = assigned_states[:seq_len]
 
     return delta, psi, assigned_states

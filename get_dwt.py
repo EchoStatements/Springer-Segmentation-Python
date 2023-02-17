@@ -17,13 +17,6 @@ outputs:
 """
 
 
-# code below for debugging
-# eng = matlab.engine.start_matlab()
-# ml_recording = eng.load("recording1.mat")
-# recording = np.asarray(ml_recording["r"]).reshape(-1)
-# recording = recording.copy()
-# Name = 'rbio3.9'
-
 def getDWT(X, N, Name):
     coeffs = pywt.wavedec(X, Name, mode='symmetric', level=N)
     length = len(X)

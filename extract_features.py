@@ -1,21 +1,78 @@
-import librosa.util
 import numpy as np
 from scipy import signal as signal
 from scipy.signal import butter, filtfilt, hilbert
 
-from schmidt_spike_removal import schmidt_spike_removal
-from getDWT import getDWT
+from get_dwt import getDWT
 
-# from scipy.signal import resample
 from librosa import resample
 
+def preprocess_audio(audio, process_list):
+    for item in process_list:
+        name = item["function"]
+        args = item["args"]
+        kwargs = item["kwargs"]
+        if name == "butterworth_high":
+            audio = get_butterworth_high_pass_filter(audio, *args, **kwargs)
+        if name == "butterworth_low":
+            audio = get_butterworth_high_pass_filter(audio, *args, **kwargs)
+        if name == "homomorphic_envelope":
+            audio = get_homomorphic_envelope_with_hilbert(audio, *args, **kwargs)
+        if name == "hilbert_envelope":
+            audio = get_hilbert_envelope(audio, *args, **kwargs)
+        if name == "psd":
+            audio = get_power_spectral_density(audio, *args, **kwargs)
+        if name == "schmidt_spike":
+            audio = schmidt_spike_removal(audio, *args, **kwargs)
+        if callable(name):
+            audio = name(audio, *args, **kwargs)
+    return audio
 
-def getSpringerPCGFeatures(audio_data,
-                           Fs,
-                           matlab_psd=False,
-                           use_psd=True,
-                           use_wavelet=True,
-                           featureFs=50):
+def collect_features(audio, audio_sample_frequency, feature_dict, feature_frequency=50):
+    outputs = []
+    desired_output_length = np.ceil(feature_frequency * len(audio) / audio_sample_frequency)
+    for key, value in feature_dict.items():
+        if key == "butterworth_high":
+            output = get_butterworth_high_pass_filter(audio, **value)
+        if key == "butterworth_low":
+            outputs = get_butterworth_high_pass_filter(audio, **value)
+        if key == "homomorphic_envelope":
+            output = get_homomorphic_envelope_with_hilbert(audio, **value)
+        if key == "hilbert_envelope":
+            outputs = get_hilbert_envelope(audio, **value)
+        if key == "psd":
+            output = get_power_spectral_density(audio, **value)
+        if callable(key):
+            output = key(audio, **value)
+        if output.shape[0] != desired_output_length:
+            output = resample(output, orig_sr=output.shape[0], target_sr=desired_output_length, fix=True)
+        output = normalise_signal(output)
+        outputs.append(output)
+    features = np.stack(outputs, axis=-1)
+    return features
+
+
+def get_default_features(audio, sample_frequency):
+    process_list = [{"name": "butterworth_low", "args" : [2, 100, sample_frequency], "kwargs" : None},
+                     {"name": "butterworth_high", "args" : [2, 25, sample_frequency], "kwargs" : None},
+                     {"name": "schmidt_spike", "args" : [sample_frequency], "kwargs" : None},]
+    audio = preprocess_audio(audio, process_list=process_list)
+
+    feature_dict = {"homomorphic_envelope" : {"sampling_freqency" : sample_frequency},
+                    "hilbert_envelope" : {},
+                    "psd" : {"sampling_frequency" : sample_frequency,
+                             "frequency_low_limit" : 40,
+                             "frequency_high_limit" : 60}
+                    }
+
+    features = collect_features(audio, audio_sample_frequency=sample_frequency, feature_dict=feature_dict)
+    return features
+
+def get_all_features(audio_data,
+                     Fs,
+                     matlab_psd=False,
+                     use_psd=True,
+                     use_wavelet=True,
+                     featureFs=50):
     """
 
     Parameters
@@ -32,7 +89,7 @@ def getSpringerPCGFeatures(audio_data,
 
     """
 
-    audio_data = get_butterworth_low_pass_filter(audio_data, 2, 400, Fs)
+    audio_data = get_butterworth_low_pass_filter(audio_data, 2, 100, Fs)
     audio_data = get_butterworth_high_pass_filter(audio_data, 2, 25, Fs)
     audio_data = schmidt_spike_removal(audio_data, Fs)
 
@@ -80,7 +137,7 @@ def getSpringerPCGFeatures(audio_data,
         all_features.append(downsampled_wavelet)
 
     features = np.stack(all_features, axis=-1)
-    return features, featureFs
+    return features
 
 
 def get_butterworth_high_pass_filter(original_signal,
@@ -228,14 +285,77 @@ def normalise_signal(signal):
 
     return normalised_signal
 
-def matlab_spectrogram(data, sampling_frequency, eng=None):
-    if eng is None:
-        import matlab.engine
-        eng = matlab.engine.start_matlab()
-    eng.addpath("../Springer-Segmentation-Code/")
-    result = eng.spectrogram(matlab.double(data),
-                             matlab.double(sampling_frequency / 40.),
-                             matlab.double(np.round(sampling_frequency/79.)),
-                             matlab.double(np.arange(1, np.round(sampling_frequency/2) + 1)),
-                             matlab.double(1000), nargout=4)
-    return result[-3], result[-2], result[-1]
+
+def schmidt_spike_removal(original_signal, fs):
+    """
+
+    % The spike removal process works as follows:
+    % (1) The recording is divided into 500 ms windows.
+    % (2) The maximum absolute amplitude (MAA) in each window is found.
+    % (3) If at least one MAA exceeds three times the median value of the MAA's,
+    % the following steps were carried out. If not continue to point 4.
+    % (a) The window with the highest MAA was chosen.
+    % (b) In the chosen window, the location of the MAA point was identified as the top of the noise spike.
+    % (c) The beginning of the noise spike was defined as the last zero-crossing point before theMAA point.
+    % (d) The end of the spike was defined as the first zero-crossing point after the maximum point.
+    % (e) The defined noise spike was replaced by zeroes.
+    % (f) Resume at step 2.
+    % (4) Procedure completed.
+    %
+
+    Parameters
+    ----------
+    original_signal : nd_array of shape (recording_length,)
+    fs : float
+        Sampling Frequency
+
+    Returns
+    -------
+
+    """
+
+    window_size = np.round(fs / 2).astype(int)
+    trailing_samples = (original_signal.shape[0] % window_size).astype(int)
+    if trailing_samples == 0:
+        sample_frames = np.reshape(original_signal, (window_size, -1))
+    else:
+        sample_frames = np.reshape(original_signal[:-trailing_samples], (window_size, -1))
+
+    MAAs = np.max(np.abs(sample_frames))
+
+    while np.any(MAAs > np.median(MAAs) * 3):
+
+        # Which window has the max MAAs
+        window_num = np.argmax(MAAs)
+        val = MAAs[window_num, :]
+
+        # What is the position of the spike in the window
+        spike_position = np.argmax(np.abs(sample_frames[:, val]))
+
+        # Find zero crossings
+        zero_crossings = np.abs(np.diff(np.sign(sample_frames[:, window_num]))) > 1
+        zero_crossings = np.append(zero_crossings, 0)
+
+        pre_spike_crossings = np.where(zero_crossings[:spike_position] == 1)
+        if pre_spike_crossings[0].shape[0] == 0:
+            spike_start = 0
+        else:
+            spike_start = pre_spike_crossings[0][-1]
+
+        post_spike_crossings = np.where(zero_crossings[spike_position:] == 1)
+        if post_spike_crossings[0].shape[0] == 0:
+            spike_end = zero_crossings.shape[0] - 1
+        else:
+            spike_end = post_spike_crossings[0][0]
+
+        sample_frames[spike_start:spike_end, window_num] = 0.0001
+
+        MAAs = np.max(np.abs(sample_frames))
+
+    despiked_signal = np.reshape(sample_frames, -1)
+    despiked_signal = np.append(despiked_signal, original_signal[despiked_signal.shape[0]:])
+
+    return despiked_signal
+
+
+
