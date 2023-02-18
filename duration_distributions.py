@@ -1,59 +1,84 @@
 import numpy as np
 
-def get_duration_distributions(heartrate, systolic_time, feature_Fs=50):
-    """
+class DataDistribution(object):
 
-    Parameters
-    ----------
-    heartrate
-    systolic_time
-    feature_Fs
+    def __init__(self, data=None, features_frequency=50):
+        self.feature_frequency = features_frequency
+        if data is None:
+            self.use_default_priors()
+        else:
+            self.get_priors_from_data(data)
 
-    Returns
-    -------
+    def get_distributions(self, heart_rate, systolic_time):
+        self.systole_mean = systolic_time * self.feature_frequency - self.s1_mean
+        self.diastole_mean = ((60. /heart_rate) - systolic_time - 0.094) * self.feature_frequency
 
-    """
-    mean_S1 = np.round(0.122 * feature_Fs)
-    std_S1 = np.round(0.022 * feature_Fs)
-    mean_S2 = np.round(0.094 * feature_Fs)
-    std_S2 = np.round(0.022 * feature_Fs)
+        self.systole_std = (25. / 1000.) * self.feature_frequency
+        self.diastole_std = 0.07 * self.diastole_mean + (6. / 1000.) *  self.feature_frequency
 
-    mean_systole = np.round(systolic_time * feature_Fs) - mean_S1
-    std_systole = (25. / 1000.) * feature_Fs
+        self.systole_max = self.systole_mean + 5 * self.systole_std
+        self.diastole_max = self.diastole_mean + 3 * self.diastole_std
 
-    mean_diastole = ((60. / heartrate) - systolic_time - 0.094) * feature_Fs
-    std_diastole = 0.07 * mean_diastole + (6. / 1000.) * feature_Fs
+        self.systole_min = self.systole_mean - 3 * self.systole_std
+        self.diastole_min = self.diastole_mean - 3 * self.diastole_std
 
-    d_distributions = np.zeros((4, 2))
+        d_distributions = np.zeros((4, 2))
 
-    d_distributions[0, 0] = mean_S1
-    d_distributions[0, 1] = std_S1 ** 2
+        d_distributions[0, 0] = self.s1_mean
+        d_distributions[0, 1] = self.s1_std ** 2
 
-    d_distributions[1, 0] = mean_systole
-    d_distributions[1, 1] = std_systole ** 2
+        d_distributions[1, 0] = self.systole_mean
+        d_distributions[1, 1] = self.systole_std ** 2
 
-    d_distributions[2, 0] = mean_S2
-    d_distributions[2, 1] = std_S2 ** 2
+        d_distributions[2, 0] = self.s2_mean
+        d_distributions[2, 1] = self.s2_std ** 2
 
-    d_distributions[3, 0] = mean_diastole
-    d_distributions[3, 1] = std_diastole ** 2
+        d_distributions[3, 0] = self.diastole_mean
+        d_distributions[3, 1] = self.diastole_std ** 2
 
-    min_systole = mean_systole - 3 * (std_systole + std_S1)
-    max_systole = mean_systole + 3 * (std_systole + std_S1)
+        return d_distributions, self.s1_max, self.s1_min, self.s2_max, self.s2_min, self.systole_max, self.systole_min, self.diastole_max, self.diastole_min
 
-    min_diastole = mean_diastole - 3. * std_diastole
-    max_diastole = mean_diastole + 3. * std_diastole
+    def get_priors_from_data(self, data):
+        durations = [[], [], [], []]
+        for segmentation in data:
+            for row_idx in range(segmentation.shape[0]):
+                if segmentation[row_idx, 2] in [1, 2, 3, 4]:
+                    duration = segmentation[row_idx, 1] - segmentation[row_idx, 0]
+                    durations[int(segmentation[row_idx, 2] - 1)].append(duration)
+        s1 = np.array(durations[0])
+        systole = np.array(durations[1])
+        s2 = np.array(durations[2])
+        diastole = np.array(durations[3])
 
-    min_S1 = (mean_S1 - 3 * std_S1)
-    if min_S1 < feature_Fs / 50.:
-        min_S1 = feature_Fs / 50.
+        self.s1_mean = np.mean(s1) * self.feature_frequency
+        self.systole_mean = np.mean(systole) * self. feature_frequency
+        self.s2_mean = np.mean(s2) * self.feature_frequency
+        self.diastole_mean = np.mean(diastole) * self.feature_frequency
 
-    min_S2 = mean_S2 - 3 * std_S2
-    if min_S2 < feature_Fs / 50.:
-        min_S2 = feature_Fs / 50.
+        self.s1_std = np.std(s1) * self.feature_frequency
+        self.systole_std = np.std(systole) * self.feature_frequency
+        self.s2_std = np.std(s2) * self.feature_frequency
+        self.diastole_std = np.std(diastole) * self.feature_frequency
 
-    max_S1 = mean_S1 + 3 * std_S1
-    max_S2 = mean_S2 + 3 * std_S2
+        self.s1_min = max(self.s1_mean - 3 * self.s1_std, self.feature_frequency / 50.)
+        self.s2_min = max(self.s2_mean - 3 * self.s2_std, self.feature_frequency / 50.)
 
-    return d_distributions, max_S1, min_S1, max_S2, min_S2, \
-           max_systole, min_systole, max_diastole, min_diastole
+        self.s1_max = self.s1_mean + 3 * self.s1_std
+        self.s2_max = self.s2_mean + 30 * self.s2_std
+
+    def use_default_priors(self):
+        self.s1_mean = np.round(0.122 * self.feature_frequency)
+        self.s1_std = np.round(0.022 * self.feature_frequency)
+        self.s2_mean = np.round(0.094 * self.feature_frequency)
+        self.s2_std = np.round(0.022 * self.feature_frequency)
+
+        self.s1_min = (self.s1_mean - 3 * self.s1_std)
+        if self.s1_min < self.feature_frequency / 50.:
+            self.s1_min = self.feature_frequency / 50.
+
+        self.s2_min = self.s2_mean - 3 * self.s2_std
+        if self.s2_min < self.feature_frequency / 50.:
+            self.s2_min = self.feature_frequency / 50.
+
+        self.s1_max = self.s1_mean + 3 * self.s1_std
+        self.s2_max = self.s2_mean + 3 * self.s2_std

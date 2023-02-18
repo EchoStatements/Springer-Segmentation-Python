@@ -1,11 +1,11 @@
 import numpy as np
 from scipy.stats import multivariate_normal
-from duration_distributions import get_duration_distributions
 
 
 def viterbi_segment(observation_sequence,
                     models,
                     total_obs_distribution,
+                    distribution,
                     heart_rate,
                     systolic_time,
                     recording_frequency):
@@ -54,7 +54,7 @@ def viterbi_segment(observation_sequence,
     observation_probs = np.where(observation_probs == 0, np.finfo(float).tiny, observation_probs)
     d_distributions, max_S1, min_S1, \
     max_S2, min_S2, max_systole, min_systole, \
-    max_diastole, min_diastole = get_duration_distributions(heart_rate, systolic_time)
+    max_diastole, min_diastole = distribution.get_distributions(heart_rate, systolic_time)
 
     duration_probs = np.zeros((num_states, 3 * recording_frequency))
     duration_sum = np.zeros(num_states)

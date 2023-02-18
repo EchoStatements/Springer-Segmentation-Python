@@ -1,6 +1,8 @@
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
+from duration_distributions import DataDistribution
 from extract_features import get_all_features, get_default_features
 from heart_rate import get_heart_rate
 from viterbi import viterbi_segment
@@ -30,7 +32,7 @@ class SegmentationModel(object):
         else:
             self.feature_extractor = get_default_features
 
-    def fit(self, recordings, segmentations):
+    def fit(self, recordings, segmentations, data_distribution=None):
         """
 
         Parameters
@@ -49,6 +51,10 @@ class SegmentationModel(object):
         """
         number_of_states = 4
         state_observation_values = []
+        if data_distribution is None:
+            self.data_distribution = DataDistribution
+        else:
+            self.data_distribution = data_distribution
 
         # Collect per-state observation values
         for recording, segmentation in zip(recordings, segmentations):
@@ -108,6 +114,7 @@ class SegmentationModel(object):
         likelihood, _, state_sequence = viterbi_segment(features,
                                                         self.models,
                                                         self.total_obs_distribution,
+                                                        distribution=self.data_distribution,
                                                         heart_rate=heart_rate,
                                                         systolic_time=systolic_time_intervals,
                                                         recording_frequency=self.feature_frequency)
@@ -209,8 +216,8 @@ class SegmentationModel(object):
 
             all_data = np.concatenate(training_data, axis=0)
 
-            regressor = LogisticRegression()
-            regressor.fit(np.abs(all_data), labels)
+            regressor = RandomForestClassifier(max_depth=10)
+            regressor.fit(all_data, labels)
             models.append(regressor)
 
         self.models = models

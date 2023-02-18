@@ -1,7 +1,50 @@
 import os
+import random
 import numpy as np
 import scipy.io.wavfile
 from tqdm import tqdm
+
+
+def create_train_test_split(directory="tiny_test",
+                            frac_train=0.8,
+                            max_train_size=None,
+                            max_test_size=None):
+
+    # create list of patient IDs
+    patient_ids = set()
+    for file_ in tqdm(sorted(os.listdir(directory))):
+        patient_ids.add(file_[:5])
+    patient_ids = list(patient_ids)
+    random.shuffle(patient_ids)
+    max_train_idx = int(np.round(frac_train * len(patient_ids)))
+    train_ids = patient_ids[:max_train_idx]
+    test_ids = patient_ids[max_train_idx:]
+
+    train_wavs = []
+    train_segs = []
+    test_wavs = []
+    test_segs = []
+
+    for file_ in tqdm(sorted(os.listdir(directory))):
+        root, extension = os.path.splitext(file_)
+        skip = False
+        skip = True if file_[:5] in train_ids and len(train_wavs) == max_train_size else skip
+        skip = True if file_[:5] in test_ids and len(test_wavs) == max_test_size else skip
+        if extension == ".wav" and not skip:
+            segmentation_file = os.path.join(directory, root + ".tsv")
+            if not os.path.exists(segmentation_file):
+                continue
+            _, recording = scipy.io.wavfile.read(os.path.join(directory, file_))
+
+            tsv_segmentation = np.loadtxt(segmentation_file, delimiter="\t")
+            if file_[:5] in train_ids:
+                train_wavs.append(recording)
+                train_segs.append(tsv_segmentation)
+            else:
+                test_wavs.append(recording)
+                test_segs.append(tsv_segmentation)
+
+    return train_wavs, train_segs, test_wavs, test_segs
 
 
 def get_wavs_and_tsvs(input_folder="tiny_test", return_names=False):
