@@ -10,20 +10,28 @@ from viterbi import viterbi_segment
 
 class SegmentationModel(object):
     """
-
+    Hidden semi-Markov model for segmenting phonocardiograms.
     """
 
     def __init__(self,
                  feature_extractor=None,
                  sampling_frequency=4000,
-                 feature_frequency=50):
+                 feature_frequency=50,
+                 feature_prob_model="logistic"):
         """
 
         Parameters
         ----------
-        feature_extractor
-        sampling_frequency
-        feature_frequency
+        feature_extractor : function or None
+            Function to be used for extracting features from audio for use by the model.
+        sampling_frequency : int (default=4000)
+            Sampling frequency of the original recording
+        feature_frequency : int (default=50)
+            Sampling frequency of features derived from feature extractor.
+        feature_prob_model : str or callable (default="logistic")
+            The model to be used to predict the probability of states given observations. "logistic" gives
+            a logistic regression model, "rf" gives a random forest. Can also except a class which implements
+            `fit` and `predict_proba` and has a constructor that doesn't require any positional arguments.
         """
         self.sampling_frequency = sampling_frequency
         self.feature_frequency = feature_frequency
@@ -31,6 +39,7 @@ class SegmentationModel(object):
             self.feature_extractor = feature_extractor
         else:
             self.feature_extractor = get_default_features
+        self.model = feature_prob_model
 
     def fit(self, recordings, segmentations, data_distribution=None):
         """
@@ -58,9 +67,9 @@ class SegmentationModel(object):
 
         # Collect per-state observation values
         for recording, segmentation in zip(recordings, segmentations):
-            PCG_Features = get_all_features(recording,
-                                               self.sampling_frequency,
-                                               featureFs=self.feature_frequency)
+            PCG_Features = self.feature_extractor(recording,
+                                            self.sampling_frequency,
+                                            )
 
             these_state_observations = []
             for state_i in range(1, number_of_states + 1):
@@ -80,6 +89,8 @@ class SegmentationModel(object):
                 min_heart_rate=60,
                 max_heart_rate=200):
         """
+        Predict state sequence for a single recording. Heart rate is used to predict phase durations in the
+        hiddem Markov model. If not heart rate is given, a heart rate is inferred from the recording.
 
         Parameters
         ----------
@@ -108,9 +119,8 @@ class SegmentationModel(object):
 
         systolic_time_intervals = systolic_time_intervals[0]
 
-        features = get_all_features(recording,
-                                       self.sampling_frequency,
-                                       featureFs=self.feature_frequency)
+        features = self.feature_extractor(recording,
+                                    self.sampling_frequency)
         likelihood, _, state_sequence = viterbi_segment(features,
                                                         self.models,
                                                         self.total_obs_distribution,
@@ -125,10 +135,11 @@ class SegmentationModel(object):
                       min_heart_rates=None,
                       max_heart_rates=None):
         """
+        Predict state sequences for a list of recordings.
 
         Parameters
         ----------
-        recordings :
+        recordings : list of ndarrays
         min_heart_rates : int or None (default=None)
             Minimum possible heart rate (if None, 60 is used)
         max_heart_rates :
@@ -156,6 +167,8 @@ class SegmentationModel(object):
 
     def _fit(self, state_observation_values):
         """
+        Helper function called by `fit` to learn model and observation distributions from state
+        observation values.
 
         Parameters
         ----------
@@ -216,7 +229,12 @@ class SegmentationModel(object):
 
             all_data = np.concatenate(training_data, axis=0)
 
-            regressor = RandomForestClassifier(max_depth=10)
+            if self.model == "logistic":
+                regressor = LogisticRegression()
+            elif self.model == "rf":
+                regressor = RandomForestClassifier(max_depth=10)
+            else:
+                regressor = self.model()
             regressor.fit(all_data, labels)
             models.append(regressor)
 

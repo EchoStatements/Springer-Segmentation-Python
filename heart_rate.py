@@ -4,8 +4,6 @@ from extract_features import schmidt_spike_removal
 
 import numpy as np
 from scipy.signal import correlate, find_peaks
-import matplotlib.pyplot as plt
-
 
 def get_heart_rate(audio_data,
                    Fs,
@@ -13,11 +11,20 @@ def get_heart_rate(audio_data,
                    max_heart_rate=190,
                    multiple_rates=True):
     """
+    Determines heart rate and systolic time interval from audio data.
 
     Parameters
     ----------
-    audio_data
-    Fs
+    audio_data : ndarray
+        Audio signal as a numpy array
+    Fs : int
+        Sample rate of the audio
+    min_heart_rate : int (default=60)
+        The minimum allowable heart rate
+    max_heart_rate : int (default=200)
+        The maximum allowable heart rate
+    multiple_rates : boolean (default=False)
+        If True, multiple candidate heart rates are generated with corresponding systolic times
 
     Returns
     -------
@@ -44,8 +51,6 @@ def get_heart_rate(audio_data,
 
     min_sys_duration = np.round(0.1 * Fs)
 
-    # The is a largely unused option that allows multiple candidate heart rates to be returned,
-    # with the idea of using the likelihoods from the Markov chain to determine which is the best candidate
     if multiple_rates:
         cut_autocorr = signal_autocorrelation[int(min_idx):int(max_idx)]
         peaks, _ = find_peaks(cut_autocorr, width=4, prominence=0.1)

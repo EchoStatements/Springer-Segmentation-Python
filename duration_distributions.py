@@ -1,6 +1,13 @@
 import numpy as np
 
 class DataDistribution(object):
+    """
+    Class for managing information about the distribution of lengths of heart phases inferred from data.
+
+    Systolic and diastolic time interval statistics are inferred on a per-example basis from heart rate.
+    S1 and S2 time interval stats are either inferred from the whole dataset or fixed to known reasonable
+    values, depending on whether training data is provided to the constructor.
+    """
 
     def __init__(self, data=None, features_frequency=50):
         self.feature_frequency = features_frequency

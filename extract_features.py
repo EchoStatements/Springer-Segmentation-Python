@@ -1,12 +1,28 @@
 import numpy as np
 from scipy import signal as signal
 from scipy.signal import butter, filtfilt, hilbert
-
 from get_dwt import getDWT
-
 from librosa import resample
 
 def preprocess_audio(audio, process_list):
+    """
+    Constructs pre-processing pipeline to be applied to audio before features are generated.
+
+    See `get_default_features` for example of use.
+
+    Parameters
+    ----------
+    audio : ndarray
+        numpy array of audio recording
+    process_list : list of dicts
+        List of processes to be applied to the signal. Each entry is a dict with a name (corresponding to the
+        function/filter to be applied), args (the positional arguments to be given to the function) and
+        kwargs (the keyword arguments to be given to the function).
+
+    Returns
+    -------
+
+    """
     for item in process_list:
         name = item["function"]
         args = item["args"]
@@ -14,7 +30,7 @@ def preprocess_audio(audio, process_list):
         if name == "butterworth_high":
             audio = get_butterworth_high_pass_filter(audio, *args, **kwargs)
         if name == "butterworth_low":
-            audio = get_butterworth_high_pass_filter(audio, *args, **kwargs)
+            audio = get_butterworth_low_pass_filter(audio, *args, **kwargs)
         if name == "homomorphic_envelope":
             audio = get_homomorphic_envelope_with_hilbert(audio, *args, **kwargs)
         if name == "hilbert_envelope":
@@ -28,23 +44,49 @@ def preprocess_audio(audio, process_list):
     return audio
 
 def collect_features(audio, audio_sample_frequency, feature_dict, feature_frequency=50):
+    """
+    Creates an array of features based on the contents of feature_dict.
+
+    See `get_default_features` for example of use.
+
+    Parameters
+    ----------
+    audio : ndarray
+        The (preprocessed) recording from which features are to be derived.
+    audio_sample_frequency : int
+        The sample frequency of the audio signal.
+    feature_dict : dict
+        Dictionary of features to be generatedj
+    feature_frequency : int
+        Number of features per second of recording
+
+    Returns
+    -------
+
+    """
     outputs = []
     desired_output_length = np.ceil(feature_frequency * len(audio) / audio_sample_frequency)
     for key, value in feature_dict.items():
         if key == "butterworth_high":
             output = get_butterworth_high_pass_filter(audio, **value)
         if key == "butterworth_low":
-            outputs = get_butterworth_high_pass_filter(audio, **value)
+            output = get_butterworth_high_pass_filter(audio, **value)
         if key == "homomorphic_envelope":
             output = get_homomorphic_envelope_with_hilbert(audio, **value)
+            output = resample(output, orig_sr=audio_sample_frequency, target_sr=feature_frequency)
         if key == "hilbert_envelope":
-            outputs = get_hilbert_envelope(audio, **value)
+            output = get_hilbert_envelope(audio, **value)
+            output = resample(output, orig_sr=audio_sample_frequency, target_sr=feature_frequency)
         if key == "psd":
             output = get_power_spectral_density(audio, **value)
+            output = resample(output, orig_sr=audio_sample_frequency, target_sr=feature_frequency)
+            if output.shape[0] != desired_output_length:
+                output = resample(output, orig_sr=output.shape[0] + 1e-9, target_sr=desired_output_length, fix=True)
+        if key == "wavelet":
+            output = get_wavelet(audio, **value)
+            output = resample(output, orig_sr=audio_sample_frequency, target_sr=feature_frequency)
         if callable(key):
             output = key(audio, **value)
-        if output.shape[0] != desired_output_length:
-            output = resample(output, orig_sr=output.shape[0], target_sr=desired_output_length, fix=True)
         output = normalise_signal(output)
         outputs.append(output)
     features = np.stack(outputs, axis=-1)
@@ -52,28 +94,42 @@ def collect_features(audio, audio_sample_frequency, feature_dict, feature_freque
 
 
 def get_default_features(audio, sample_frequency):
-    process_list = [{"name": "butterworth_low", "args" : [2, 100, sample_frequency], "kwargs" : None},
-                     {"name": "butterworth_high", "args" : [2, 25, sample_frequency], "kwargs" : None},
-                     {"name": "schmidt_spike", "args" : [sample_frequency], "kwargs" : None},]
+    """
+    Default preprocessing and feature generation from audio
+
+    Parameters
+    ----------
+    audio
+    sample_frequency
+
+    Returns
+    -------
+
+    """
+    process_list = [{"function": "butterworth_low", "args" : [2, 100, sample_frequency], "kwargs" : {}},
+                     {"function": "butterworth_high", "args" : [2, 25, sample_frequency], "kwargs" : {}},
+                     {"function": "schmidt_spike", "args" : [sample_frequency], "kwargs" : {}},]
     audio = preprocess_audio(audio, process_list=process_list)
 
-    feature_dict = {"homomorphic_envelope" : {"sampling_freqency" : sample_frequency},
+    feature_dict = {"homomorphic_envelope" : {"sampling_frequency" : sample_frequency},
                     "hilbert_envelope" : {},
                     "psd" : {"sampling_frequency" : sample_frequency,
-                             "frequency_low_limit" : 40,
-                             "frequency_high_limit" : 60}
+                             "frequency_limit_low" : 40,
+                             "frequency_limit_high" : 60},
+                    "wavelet" : {"sample_frequency" : sample_frequency}
                     }
+
 
     features = collect_features(audio, audio_sample_frequency=sample_frequency, feature_dict=feature_dict)
     return features
 
 def get_all_features(audio_data,
                      Fs,
-                     matlab_psd=False,
                      use_psd=True,
                      use_wavelet=True,
                      featureFs=50):
     """
+    DEPRECATED
 
     Parameters
     ----------
@@ -108,9 +164,8 @@ def get_all_features(audio_data,
     all_features.append(downsampled_hilbert_envelope)
 
     if use_psd:
-        psd = get_power_spectral_density(audio_data, Fs, 40, 60, use_matlab=matlab_psd)
-        if not matlab_psd:
-            psd = psd / 2
+        psd = get_power_spectral_density(audio_data, Fs, 40, 60, )
+        psd = psd / 2
         psd = resample(psd,
                        orig_sr=(1+1e-9),
                        target_sr=downsampled_homomorphic_envelope.shape[0] / len(psd))
@@ -138,6 +193,19 @@ def get_all_features(audio_data,
 
     features = np.stack(all_features, axis=-1)
     return features
+
+def get_wavelet(audio_data, sample_frequency):
+    wavelet_level = 3
+    wavelet_name = "rbio3.9"
+
+    if len(audio_data) < sample_frequency * 1.025:
+        audio_data = np.concatenate((audio_data, np.zeros((round(0.025 * sample_frequency)))))
+
+    # audio needs to be longer than 1 second for getDWT to work
+    cD, cA = getDWT(audio_data, wavelet_level, wavelet_name)
+
+    wavelet_feature = abs(cD[wavelet_level - 1, :])
+    return wavelet_feature
 
 
 def get_butterworth_high_pass_filter(original_signal,
@@ -226,7 +294,7 @@ def get_hilbert_envelope(input_signal):
     return hilbert_envelope
 
 
-def get_power_spectral_density(data, sampling_frequency, frequency_limit_low, frequency_limit_high, use_matlab=False):
+def get_power_spectral_density(data, sampling_frequency, frequency_limit_low, frequency_limit_high):
     """
 
     Parameters
@@ -242,24 +310,14 @@ def get_power_spectral_density(data, sampling_frequency, frequency_limit_low, fr
 
     """
     # note that hamming window is implicit in the matlab function - this might be what was messing up the shapes
-    if not use_matlab:
-        f, t, Sxx = signal.spectrogram(data, sampling_frequency, window=('hamming'), nperseg=int(sampling_frequency / 41),
-                                       noverlap=int(sampling_frequency / 81), nfft=sampling_frequency)
-        # ignore the DC component - springer does this by returning freqs from 1 to round(sampling_frequency/2). We do the same by removing the first row.
-        Sxx = Sxx[1:, :]
-
-    else:
-        f, t, Sxx = matlab_spectrogram(data, sampling_frequency)
-        f = np.asarray(f)
-        t = np.asarray(t)
-        Sxx = np.asarray(Sxx)
-
+    f, t, Sxx = signal.spectrogram(data, sampling_frequency, window=('hamming'), nperseg=int(sampling_frequency / 41),
+                                   noverlap=int(sampling_frequency / 81), nfft=sampling_frequency)
+    # ignore the DC component - springer does this by returning freqs from 1 to round(sampling_frequency/2). We do the same by removing the first row.
+    Sxx = Sxx[1:, :]
 
     low_limit_position = np.where(f == frequency_limit_low)
     high_limit_position = np.where(f == frequency_limit_high)
 
-    # Find the mean PSD over the frequency range of interest:
-    # This indexing passes tests, but I don't know why
     psd = np.mean(Sxx[low_limit_position[0][0]:high_limit_position[0][0]+1, :], axis=0)
 
     return psd
